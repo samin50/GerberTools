@@ -62,6 +62,7 @@
     <Compile Include="MarcelShape.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="QuadTree.cs" />
+    <Compile Include="RenderProgress.cs" />
     <Compile Include="SVGThings.cs" />
     <Compile Include="Tiling.cs" />
     <Compile Include="TINRSArtWorkRenderer.cs" />

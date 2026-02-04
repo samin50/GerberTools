@@ -70,6 +70,9 @@
             this.label12 = new System.Windows.Forms.Label();
             this.button1 = new System.Windows.Forms.Button();
             this.openFileDialog1 = new System.Windows.Forms.OpenFileDialog();
+            this.progressBar = new System.Windows.Forms.ProgressBar();
+            this.lblProgress = new System.Windows.Forms.Label();
+            this.cancelButton = new System.Windows.Forms.Button();
             this.groupBox1.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.maxdepthbox)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.rotationbox)).BeginInit();
@@ -598,6 +601,32 @@
             this.openFileDialog1.FileName = "openFileDialog1";
             this.openFileDialog1.Filter = "Images|*.png";
             // 
+            // progressBar
+            // 
+            this.progressBar.Location = new System.Drawing.Point(14, 180);
+            this.progressBar.Name = "progressBar";
+            this.progressBar.Size = new System.Drawing.Size(225, 23);
+            this.progressBar.TabIndex = 37;
+            // 
+            // lblProgress
+            // 
+            this.lblProgress.AutoSize = true;
+            this.lblProgress.Location = new System.Drawing.Point(14, 206);
+            this.lblProgress.Name = "lblProgress";
+            this.lblProgress.Size = new System.Drawing.Size(52, 20);
+            this.lblProgress.TabIndex = 38;
+            this.lblProgress.Text = "Ready";
+            // 
+            // cancelButton
+            // 
+            this.cancelButton.Location = new System.Drawing.Point(157, 206);
+            this.cancelButton.Name = "cancelButton";
+            this.cancelButton.Size = new System.Drawing.Size(82, 29);
+            this.cancelButton.TabIndex = 39;
+            this.cancelButton.Text = "Cancel";
+            this.cancelButton.UseVisualStyleBackColor = true;
+            this.cancelButton.Click += new System.EventHandler(this.cancelButton_Click);
+            // 
             // SettingsDialog
             // 
             this.AllowDrop = true;
@@ -605,6 +634,9 @@
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(573, 906);
             this.ControlBox = false;
+            this.Controls.Add(this.cancelButton);
+            this.Controls.Add(this.lblProgress);
+            this.Controls.Add(this.progressBar);
             this.Controls.Add(this.button1);
             this.Controls.Add(this.label12);
             this.Controls.Add(this.Rounding);
@@ -714,5 +746,8 @@
         private System.Windows.Forms.Label label12;
         private System.Windows.Forms.Button button1;
         private System.Windows.Forms.OpenFileDialog openFileDialog1;
+        private System.Windows.Forms.ProgressBar progressBar;
+        private System.Windows.Forms.Label lblProgress;
+        private System.Windows.Forms.Button cancelButton;
     }
 }

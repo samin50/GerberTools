@@ -18,6 +18,7 @@ namespace TINRS_ArtWorkGenerator
         bool initdone = false;
         private Action TheCallback;
         private Action<string> TheProcessCallback;
+        private Action TheCancelCallback;
 
         public void UpdateFromSettings()
         {
@@ -52,10 +53,11 @@ namespace TINRS_ArtWorkGenerator
 
         }
 
-        public SettingsDialog(Settings Target, Action callback, Action<string> proccall)
+        public SettingsDialog(Settings Target, Action callback, Action<string> proccall, Action cancelCallback = null)
         {
             TheProcessCallback = proccall;
             SettingsTarget = Target;
+            TheCancelCallback = cancelCallback;
             InitializeComponent();
             UpdateCheckbox.Checked = true;
 
@@ -69,6 +71,51 @@ namespace TINRS_ArtWorkGenerator
             UpdateFromSettings();
 
             initdone = true;
+        }
+
+        /// <summary>
+        /// Updates the progress display with progress bar and label.
+        /// Thread-safe - can be called from any thread.
+        /// </summary>
+        public void SetProgress(int percent, string stage)
+        {
+            if (InvokeRequired)
+            {
+                BeginInvoke(new Action(() => SetProgress(percent, stage)));
+                return;
+            }
+            
+            // Update progress bar
+            progressBar.Value = Math.Max(0, Math.Min(100, percent));
+            
+            // Update label
+            if (string.IsNullOrEmpty(stage))
+            {
+                lblProgress.Text = "Ready";
+                Text = "Settings";
+            }
+            else
+            {
+                lblProgress.Text = stage;
+                Text = $"Settings - {stage} ({percent}%)";
+            }
+        }
+
+        /// <summary>
+        /// Cancels the current render operation.
+        /// </summary>
+        public void CancelCurrentRender()
+        {
+            TheCancelCallback?.Invoke();
+        }
+
+        /// <summary>
+        /// Cancel button click handler.
+        /// </summary>
+        private void cancelButton_Click(object sender, EventArgs e)
+        {
+            CancelCurrentRender();
+            lblProgress.Text = "Cancelling...";
         }
 
 

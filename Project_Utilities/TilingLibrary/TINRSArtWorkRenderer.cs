@@ -9,6 +9,7 @@ using System.Drawing.Imaging;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using TilingLibrary;
 
@@ -533,7 +534,25 @@ namespace Artwork
     */
         }
 
+        /// <summary>
+        /// Builds artwork geometry from the mask using current settings.
+        /// This overload maintains backward compatibility.
+        /// </summary>
         public int BuildStuff(Bitmap aMask, Settings TheSettings)
+        {
+            return BuildStuff(aMask, TheSettings, CancellationToken.None, null);
+        }
+
+        /// <summary>
+        /// Builds artwork geometry from the mask using current settings.
+        /// Supports cancellation and progress reporting for background execution.
+        /// </summary>
+        /// <param name="aMask">The mask bitmap</param>
+        /// <param name="TheSettings">Rendering settings</param>
+        /// <param name="cancellationToken">Token to cancel the operation</param>
+        /// <param name="progress">Progress reporter for UI updates</param>
+        /// <returns>Elapsed time in milliseconds</returns>
+        public int BuildStuff(Bitmap aMask, Settings TheSettings, CancellationToken cancellationToken, IProgress<RenderProgress> progress)
         {
             DirectBitmap Mask = new DirectBitmap(aMask.Width, aMask.Height);
             Graphics mg = Graphics.FromImage(Mask.Bitmap);
@@ -553,8 +572,21 @@ namespace Artwork
 
                         ArtTree = new QuadTreeNode() { xstart = -1000, ystart = -1000, xend = R, yend = R };
                         float hoek = (float)((6.283 * TheSettings.DegreesOff) / 360.0);
+                        int progressInterval = Math.Max(1, Mask.Width / 20); // Report every 5%
+                        progress?.Report(new RenderProgress(0, "Building QuadTree..."));
+                        
                         for (int x = 0; x < Mask.Width; x++)
                         {
+                            // Check for cancellation at each column
+                            cancellationToken.ThrowIfCancellationRequested();
+                            
+                            // Report progress every 5%
+                            if (x % progressInterval == 0)
+                            {
+                                int percent = (x * 100) / Mask.Width;
+                                progress?.Report(new RenderProgress(percent, $"Building QuadTree ({percent}%)..."));
+                            }
+                            
                             for (int y = 0; y < Mask.Height; y++)
                             {
                                 var C = Mask.GetPixelFast(x, y);
@@ -575,6 +607,7 @@ namespace Artwork
                                 }
                             }
                         }
+                        progress?.Report(new RenderProgress(100, "QuadTree complete") { IsComplete = true });
                         var Elapsed = DateTime.Now - rR;
                         return (int)Elapsed.TotalMilliseconds;
                     }
@@ -584,8 +617,19 @@ namespace Artwork
                         DateTime rR = DateTime.Now;
                         ArtTree = new QuadTreeNode() { xstart = -1000, ystart = -1000, xend = R, yend = R };
                         float hoek = (float)((6.283 * TheSettings.DegreesOff) / 360.0);
+                        int progressInterval = Math.Max(1, Mask.Width / 20);
+                        progress?.Report(new RenderProgress(0, "Building Delaunay..."));
+                        
                         for (int x = 0; x < Mask.Width; x++)
                         {
+                            cancellationToken.ThrowIfCancellationRequested();
+                            
+                            if (x % progressInterval == 0)
+                            {
+                                int percent = (x * 80) / Mask.Width; // 0-80% for pixel processing
+                                progress?.Report(new RenderProgress(percent, $"Building Delaunay ({percent}%)..."));
+                            }
+                            
                             for (int y = 0; y < Mask.Height; y++)
                             {
                                 var C = Mask.GetPixelFast(x, y);
@@ -607,14 +651,18 @@ namespace Artwork
                             }
                         }
 
+                        cancellationToken.ThrowIfCancellationRequested();
+                        progress?.Report(new RenderProgress(85, "Computing Delaunay triangulation..."));
                         Delaunay.Build(ArtTree, TheSettings.DegreesOff);
 
+                        progress?.Report(new RenderProgress(100, "Delaunay complete") { IsComplete = true });
                         var Elapsed = DateTime.Now - rR;
                         return (int)Elapsed.TotalMilliseconds;
                     };
 
                 case Settings.ArtMode.Tiling:
                     {
+                        progress?.Report(new RenderProgress(0, "Creating tiling..."));
                         TD.Create(TheSettings.TileType);
                         var P = TD.CreateBaseTriangle(TheSettings.BaseTile, 1000);
                         var P2 = TD.CreateBaseTriangle(TheSettings.BaseTile, 1000);
@@ -634,13 +682,21 @@ namespace Artwork
                             }
                         }
 
+                        cancellationToken.ThrowIfCancellationRequested();
+                        progress?.Report(new RenderProgress(10, "Subdividing polygons..."));
+                        
                         DateTime rR = DateTime.Now;
-                        SubDivPoly = TD.SubdivideAdaptive(P, TheSettings.MaxSubDiv, MaskTree, TheSettings.alwayssubdivide);
+                        SubDivPoly = TD.SubdivideAdaptive(P, TheSettings.MaxSubDiv, MaskTree, TheSettings.alwayssubdivide, cancellationToken);
 
                         if (TheSettings.Symmetry)
                         {
-                            SubDivPoly.AddRange(TD.SubdivideAdaptive(P2, TheSettings.MaxSubDiv, MaskTree, TheSettings.alwayssubdivide));
+                            cancellationToken.ThrowIfCancellationRequested();
+                            progress?.Report(new RenderProgress(30, "Subdividing symmetry..."));
+                            SubDivPoly.AddRange(TD.SubdivideAdaptive(P2, TheSettings.MaxSubDiv, MaskTree, TheSettings.alwayssubdivide, cancellationToken));
                         }
+                        
+                        // Report intermediate polygons for progressive rendering
+                        progress?.Report(new RenderProgress(50, "Subdivision complete") { IntermediatePolygons = SubDivPoly.ToList() });
 
                         if (TheSettings.xscalesmallerlevel != 0)
                         {

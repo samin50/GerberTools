@@ -10,6 +10,7 @@ using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.Xml.Serialization;
@@ -27,12 +28,18 @@ namespace TINRS_ArtWorkGenerator
         Bitmap Mask;
         Bitmap Output;
         SettingsDialog TheSettingsDialog;
+        
+        // Background rendering support
+        private CancellationTokenSource _renderCts;
+        private System.Windows.Forms.Timer _debounceTimer;
+        private const int DEBOUNCE_MS = 100; // Debounce delay in milliseconds
+        private readonly object _renderLock = new object();
 
         public TinrsArtWork()
         {
             InitializeComponent();
             TheSettings.SetupFenixDefault();
-            TheSettingsDialog = new SettingsDialog(TheSettings, UpdateFunc, ProcessFunc);
+            TheSettingsDialog = new SettingsDialog(TheSettings, UpdateFunc, ProcessFunc, CancelRender);
 
             string[] args = Environment.GetCommandLineArgs();
             if (args.Count() > 1)
@@ -87,6 +94,17 @@ namespace TINRS_ArtWorkGenerator
             SaveSVG(file + ".svg");
         }
 
+        /// <summary>
+        /// Cancels any in-progress render operation.
+        /// </summary>
+        public void CancelRender()
+        {
+            _renderCts?.Cancel();
+        }
+
+        /// <summary>
+        /// Main update function - debounces rapid calls and triggers background render.
+        /// </summary>
         public void UpdateFunc()
         {
             if (TheSettings.ReloadMask)
@@ -95,13 +113,88 @@ namespace TINRS_ArtWorkGenerator
                 LoadMask(LoadedMask);
                 return;
             }
-            pictureBox1.Invalidate();
-           // pictureBox2.Invalidate();
+            
+            // Cancel any pending debounce
+            _debounceTimer?.Stop();
+            _debounceTimer?.Dispose();
+            
+            // Start debounce timer
+            _debounceTimer = new System.Windows.Forms.Timer();
+            _debounceTimer.Interval = DEBOUNCE_MS;
+            _debounceTimer.Tick += async (s, e) =>
+            {
+                _debounceTimer.Stop();
+                await UpdateFuncAsync();
+            };
+            _debounceTimer.Start();
+        }
 
+        /// <summary>
+        /// Async update function that runs rendering in background thread.
+        /// </summary>
+        private async Task UpdateFuncAsync()
+        {
             if (Mask == null) return;
 
-            ArtRender.BuildStuff(Mask, TheSettings);
+            // Cancel any in-progress render
+            _renderCts?.Cancel();
             
+            var cts = new CancellationTokenSource();
+            _renderCts = cts;
+            
+            // Create progress reporter that updates UI
+            var progress = new Progress<RenderProgress>(OnRenderProgress);
+            
+            try
+            {
+                // Clone the mask for thread-safe access
+                Bitmap maskCopy;
+                lock (_renderLock)
+                {
+                    maskCopy = new Bitmap(Mask);
+                }
+                
+                TheSettingsDialog?.SetProgress(0, "Starting render...");
+                
+                // Run rendering in background
+                await Task.Run(() =>
+                {
+                    cts.Token.ThrowIfCancellationRequested();
+                    ArtRender.BuildStuff(maskCopy, TheSettings, cts.Token, progress);
+                }, cts.Token);
+                
+                // Update display on completion
+                TheSettingsDialog?.SetProgress(100, "Complete");
+                pictureBox1.Invalidate();
+            }
+            catch (OperationCanceledException)
+            {
+                // Expected when cancelling - update UI
+                TheSettingsDialog?.SetProgress(0, "Cancelled");
+            }
+            catch (Exception ex)
+            {
+                TheSettingsDialog?.SetProgress(0, $"Error: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Callback for progress updates from the background renderer.
+        /// </summary>
+        private void OnRenderProgress(RenderProgress progress)
+        {
+            // Update progress indicator
+            TheSettingsDialog?.SetProgress(progress.PercentComplete, progress.Stage);
+            
+            // Progressive rendering: update preview with intermediate results
+            if (progress.IntermediatePolygons != null)
+            {
+                lock (_renderLock)
+                {
+                    ArtRender.SubDivPoly = progress.IntermediatePolygons;
+                }
+                pictureBox1.Invalidate();
+            }
         }
 
 

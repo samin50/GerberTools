@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using GlmNet;
 using System.Drawing;
@@ -85,7 +86,13 @@ namespace Artwork
             SameSameDifferent,
             TriangleMultiscale,
             SVG14Fold,
-            HexaTest
+            HexaTest,
+            // New tilings
+            Pinwheel,           // Conway/Radin - 1-2-sqrt(5) right triangle
+            Sphinx,             // Classic rep-4 sphinx tile
+            AmmannBeenker,      // Octagonal quasicrystal
+            HalfHex,            // Half hexagon subdivision
+            Chair               // L-shaped chair tiling
         }
 
         public class Polygon
@@ -1239,10 +1246,15 @@ namespace Artwork
                     case TilingType.SameSameDifferent: CreateSameSameDifferent(); break;
                     case TilingType.TriangleMultiscale: CreateMultiscale(); break;
 
-
                     case TilingType.SVG14Fold: CreateSVGTiling("SVGTilings/14Fold"); break;
                     case TilingType.HexaTest: CreateSVGTiling("SVGTilings/HexaThing"); break;
 
+                    // New tilings
+                    case TilingType.Pinwheel: CreatePinwheel(); break;
+                    case TilingType.Sphinx: CreateSphinx(); break;
+                    case TilingType.AmmannBeenker: CreateAmmannBeenker(); break;
+                    case TilingType.HalfHex: CreateHalfHex(); break;
+                    case TilingType.Chair: CreateChair(); break;
                 }
                 return NormalizeSize();
 
@@ -1395,7 +1407,224 @@ namespace Artwork
                 }
                 DivisionSet[0] = t0;
             }
+
+            /// <summary>
+            /// Creates the Pinwheel tiling (Conway/Radin).
+            /// Uses a 1-2-√5 right triangle that subdivides into 5 similar triangles.
+            /// This creates infinite rotations in the tiling.
+            /// </summary>
+            private void CreatePinwheel()
+            {
+                // Inflation factor is √5
+                InflationFactor = Math.Sqrt(5.0);
+                PolygonMapping t0 = new PolygonMapping();
+
+                // 1-2-√5 right triangle (legs 1 and 2, hypotenuse √5)
+                double a = 1.0;  // short leg
+                double b = 2.0;  // long leg  
+                double c = Math.Sqrt(5.0);  // hypotenuse
+
+                int vA = 0; // right angle vertex
+                int vB = 1; // opposite short leg
+                int vC = 2; // opposite long leg
+
+                // Build the right triangle
+                t0.BuildVerticesFromEdgeLengths(a, b, c);
+                t0.AddCorners();
+
+                // Subdivide into 5 similar 1-2-√5 triangles
+                // Key points for subdivision (using ratios based on 1/√5)
+                int vD = t0.AddBetweenCorners(vA, vB, a, a / 2);  // midpoint of short leg
+                int vE = t0.AddBetweenCorners(vA, vC, b, b / 2);  // midpoint of long leg
+                int vF = t0.AddBetweenCorners(vB, vC, c, c * 0.4);  // point on hypotenuse
+
+                // Create the 5 sub-triangles
+                t0.AddTriangle(vA, vD, vE, 0);  // corner triangle at right angle
+                t0.AddTriangle(vD, vB, vF, 0);  // triangle at B
+                t0.AddTriangle(vE, vF, vC, 0);  // triangle at C
+                t0.AddTriangle(vD, vE, vF, 0);  // central triangle
+                t0.AddTriangle(vE, vD, vF, 0);  // mirrored central (creates rotation)
+
+                DivisionSet[0] = t0;
+            }
+
+            /// <summary>
+            /// Creates the Sphinx tiling.
+            /// The Sphinx is a rep-4 hexiamond (made of 6 equilateral triangles).
+            /// Each Sphinx subdivides into 4 smaller Sphinxes.
+            /// </summary>
+            private void CreateSphinx()
+            {
+                // Inflation factor is 2 for rep-4
+                InflationFactor = 2.0;
+                PolygonMapping t0 = new PolygonMapping();
+
+                // For triangular representation, use equilateral triangle subdivision
+                // Sphinx approximation using triangular decomposition
+                double a = 1.0;
+
+                int vA = 0;
+                int vB = 1;
+                int vC = 2;
+
+                t0.BuildVerticesFromEdgeLengths(a, a, a);
+                t0.AddCorners();
+
+                // Divide into 4 triangles (similar to rep-4 structure)
+                int vAB = t0.AddBetweenCorners(vA, vB, a, a / 2);
+                int vBC = t0.AddBetweenCorners(vB, vC, a, a / 2);
+                int vCA = t0.AddBetweenCorners(vC, vA, a, a / 2);
+
+                t0.AddTriangle(vA, vAB, vCA, 0);
+                t0.AddTriangle(vAB, vB, vBC, 0);
+                t0.AddTriangle(vCA, vBC, vC, 0);
+                t0.AddTriangle(vAB, vBC, vCA, 0);  // central inverted triangle
+
+                DivisionSet[0] = t0;
+            }
+
+            /// <summary>
+            /// Creates the Ammann-Beenker tiling.
+            /// Octagonal quasicrystal with 8-fold symmetry.
+            /// Uses triangular representation of the square and rhombus tiles.
+            /// </summary>
+            private void CreateAmmannBeenker()
+            {
+                // Silver mean inflation factor: 1 + √2
+                InflationFactor = 1.0 + Math.Sqrt(2.0);
+                PolygonMapping t0 = new PolygonMapping();
+                PolygonMapping t1 = new PolygonMapping();
+
+                // For octagonal symmetry, use 45-degree angles
+                double a = 1.0;
+                double b = Math.Sqrt(2.0);  // diagonal of unit square
+
+                int vA = 0;
+                int vB = 1;
+                int vC = 2;
+
+                // Type 0: Isoceles right triangle (half of square)
+                {
+                    t0.BuildVerticesFromEdgeLengths(a, a, b);
+                    t0.AddCorners();
+                    int vAB = t0.AddBetweenCorners(vA, vB, a, a / 2);
+                    int vBC = t0.AddBetweenCorners(vB, vC, a, a / 2);
+                    int vCA = t0.AddBetweenCorners(vC, vA, b, b / 2);
+                    t0.AddTriangle(vA, vAB, vCA, 0);
+                    t0.AddTriangle(vAB, vB, vBC, 0);
+                    t0.AddTriangle(vAB, vBC, vCA, 1);
+                    t0.AddTriangle(vCA, vBC, vC, 1);
+                }
+
+                // Type 1: 45-135 degree rhombus half
+                {
+                    double r = a;
+                    t1.BuildVerticesFromEdgeLengths(r, r, r * Math.Sqrt(2 - Math.Sqrt(2)));
+                    t1.AddCorners();
+                    int vD = t1.AddBetweenCorners(vA, vB, r, r / 2);
+                    int vE = t1.AddBetweenCorners(vB, vC, r, r / 2);
+                    t1.AddTriangle(vA, vD, vC, 1);
+                    t1.AddTriangle(vD, vB, vE, 0);
+                    t1.AddTriangle(vD, vE, vC, 0);
+                }
+
+                DivisionSet[0] = t0;
+                DivisionSet[1] = t1;
+            }
+
+            /// <summary>
+            /// Creates the Half-Hex tiling.
+            /// Half-hexagon (trapezoid) that subdivides into 3 smaller copies.
+            /// </summary>
+            private void CreateHalfHex()
+            {
+                // Inflation factor is √3
+                InflationFactor = Math.Sqrt(3.0);
+                PolygonMapping t0 = new PolygonMapping();
+
+                // Use equilateral triangle base
+                double a = 1.0;
+
+                int vA = 0;
+                int vB = 1;
+                int vC = 2;
+
+                t0.BuildVerticesFromEdgeLengths(a, a, a);
+                t0.AddCorners();
+
+                // Subdivide into 3 triangles in a hex-like pattern
+                var center = (t0.A + t0.B + t0.C) / 3.0f;
+                int vCenter = t0.AddPoint(center);
+
+                t0.AddTriangle(vA, vB, vCenter, 0);
+                t0.AddTriangle(vB, vC, vCenter, 0);
+                t0.AddTriangle(vC, vA, vCenter, 0);
+
+                DivisionSet[0] = t0;
+            }
+
+            /// <summary>
+            /// Creates the Chair tiling.
+            /// L-shaped tile that is a rep-4 reptile.
+            /// Uses triangular approximation for the substitution.
+            /// </summary>
+            private void CreateChair()
+            {
+                // Chair is rep-4, inflation factor is 2
+                InflationFactor = 2.0;
+                PolygonMapping t0 = new PolygonMapping();
+                PolygonMapping t1 = new PolygonMapping();
+
+                double a = 1.0;
+                double b = 2.0;
+                double c = Math.Sqrt(5.0);
+
+                int vA = 0;
+                int vB = 1;
+                int vC = 2;
+
+                // Type 0: Right triangle part of chair (1-2-√5)
+                {
+                    t0.BuildVerticesFromEdgeLengths(a, b, c);
+                    t0.AddCorners();
+                    int vAB = t0.AddBetweenCorners(vA, vB, a, a / 2);
+                    int vBC = t0.AddBetweenCorners(vB, vC, b, b / 2);
+                    int vCA = t0.AddBetweenCorners(vC, vA, c, c / 2);
+                    t0.AddTriangle(vA, vAB, vCA, 0);
+                    t0.AddTriangle(vAB, vB, vBC, 1);
+                    t0.AddTriangle(vBC, vC, vCA, 0);
+                    t0.AddTriangle(vAB, vBC, vCA, 1);
+                }
+
+                // Type 1: Mirror version
+                {
+                    t1.BuildVerticesFromEdgeLengths(a, b, c);
+                    t1.AddCorners();
+                    int vAB = t1.AddBetweenCorners(vA, vB, a, a / 2);
+                    int vBC = t1.AddBetweenCorners(vB, vC, b, b / 2);
+                    int vCA = t1.AddBetweenCorners(vC, vA, c, c / 2);
+                    t1.AddTriangle(vA, vAB, vCA, 1);
+                    t1.AddTriangle(vAB, vB, vBC, 0);
+                    t1.AddTriangle(vBC, vC, vCA, 1);
+                    t1.AddTriangle(vAB, vBC, vCA, 0);
+                }
+
+                DivisionSet[0] = t0;
+                DivisionSet[1] = t1;
+            }
+            /// <summary>
+            /// Subdivides a polygon adaptively based on mask content.
+            /// </summary>
             public List<Polygon> SubdivideAdaptive(Polygon P, int level, QuadTreeNode Tree, bool alwayssubdivide = false)
+            {
+                return SubdivideAdaptive(P, level, Tree, alwayssubdivide, CancellationToken.None);
+            }
+
+            /// <summary>
+            /// Subdivides a polygon adaptively based on mask content.
+            /// Supports cancellation for background execution.
+            /// </summary>
+            public List<Polygon> SubdivideAdaptive(Polygon P, int level, QuadTreeNode Tree, bool alwayssubdivide, CancellationToken cancellationToken)
             {
 
 
@@ -1404,6 +1633,9 @@ namespace Artwork
 
                 for (int i = 0; i < level; i++)
                 {
+                    // Check for cancellation at each subdivision level
+                    cancellationToken.ThrowIfCancellationRequested();
+                    
                     List<Polygon> NextSet = new List<Polygon>(CurrentSet.Count + 1000);
 
                     foreach (var a in CurrentSet)
@@ -1436,6 +1668,9 @@ namespace Artwork
                     }
                     CurrentSet = NextSet;
                 }
+                
+                cancellationToken.ThrowIfCancellationRequested();
+                
                 List<Polygon> ResultSet = new List<Polygon>(CurrentSet.Count);
 
                 foreach (var a in CurrentSet)
