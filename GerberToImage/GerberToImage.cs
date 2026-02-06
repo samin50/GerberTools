@@ -144,7 +144,7 @@ namespace GerberToImage
         {
             
             if (arg.ToLower().EndsWith(".png") == true) return;
-            GerberImageCreator.AA = false;
+            GerberImageCreator.AA = true;
             //Gerber.Verbose = true;
             if (Gerber.ThrowExceptions)
             {

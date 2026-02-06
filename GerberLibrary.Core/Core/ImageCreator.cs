@@ -209,7 +209,7 @@ namespace GerberLibrary
 
         public static void ApplyAASettings(GraphicsInterface G)
         {
-            // AA is handled by GraphicsOptions in ImageSharpGraphicsInterface
+            if (G != null) G.AntiAlias = AA;
             // We can toggle a flag if needed, but for now we rely on defaults.
             if (AA)
             {
@@ -447,11 +447,11 @@ namespace GerberLibrary
             
             Matrix3x2 T = Matrix3x2.Identity;
             
-            T = T * Matrix3x2.CreateTranslation(0, h);
-            T = T * Matrix3x2.CreateScale(1, -1);
-            T = T * Matrix3x2.CreateTranslation(1, 1);
-            T = T * Matrix3x2.CreateScale((float)scale, (float)scale);
             T = T * Matrix3x2.CreateTranslation((float)-OutlineBoundingBox.TopLeft.X, (float)-OutlineBoundingBox.TopLeft.Y);
+            T = T * Matrix3x2.CreateScale((float)scale, (float)scale);
+            T = T * Matrix3x2.CreateTranslation(1, 1);
+            T = T * Matrix3x2.CreateScale(1, -1);
+            T = T * Matrix3x2.CreateTranslation(0, h);
             
             return T;
         }
@@ -569,6 +569,7 @@ namespace GerberLibrary
             var G3 = new ImageSharpGraphicsInterface(B2);
             G3.Clear(backgroundcolor);
             G3.Transform = Transform;
+            ApplyAASettings(G3);
 
             GerberLibrary.Core.Primitives.Pen P = new GerberLibrary.Core.Primitives.Pen(foregroundcolor, 1.0f / (float)(scale));
             int Shapes = 0;
@@ -1513,10 +1514,10 @@ namespace GerberLibrary
                     }
                     else
                     {
-                        G.FillPolygon(new SolidBrush(c), Points.ToArray());
-                        G.DrawLines(new Pen(c, P.Width / 4), Points.ToArray());
-                    }
-                }
+                         G.FillPolygon(new SolidBrush(c), Points.ToArray());
+                        // G.DrawLines(new Pen(c, P.Width / 4), Points.ToArray());
+                     }
+                 }
                 else
                 {
                     G.DrawLines(P, Points.ToArray());

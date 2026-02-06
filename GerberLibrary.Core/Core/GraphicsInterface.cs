@@ -72,7 +72,7 @@ namespace GerberLibrary.Core
         // Emulate System.Drawing InterpolationMode somewhat?
         public virtual GraphicsInterpolationMode InterpolationMode { get; set; } 
         public virtual CompositingMode CompositingMode { get; set; }
-
+        public virtual bool AntiAlias { get; set; } = true;
     }
 
     public class ImageSharpGraphicsInterface : GraphicsInterface
@@ -95,6 +95,7 @@ namespace GerberLibrary.Core
         public override bool IsFast => false;
         public override GraphicsInterpolationMode InterpolationMode { get; set; }
         public override CompositingMode CompositingMode { get; set; }
+        public override bool AntiAlias { get; set; } = true;
 
         public override void Clear(Color color)
         {
@@ -103,7 +104,7 @@ namespace GerberLibrary.Core
 
         private DrawingOptions GetOptions()
         {
-            return new DrawingOptions { Transform = _transform };
+            return new DrawingOptions { Transform = _transform, GraphicsOptions = new GraphicsOptions { Antialias = AntiAlias } };
         }
 
         private SolidPen GetPen(GerberLibrary.Core.Primitives.Pen pen)

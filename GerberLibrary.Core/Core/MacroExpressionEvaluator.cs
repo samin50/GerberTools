@@ -401,7 +401,7 @@ namespace GerberLibrary
                                         }
                                         else
                                         {
-                                            string operators = "-+/*^";
+                                            string operators = "-+/*^xX";
 
                                             if (operators.Contains(c))
                                             {
@@ -410,6 +410,7 @@ namespace GerberLibrary
                                                 if (c == '-') CurrentOperator = AstOperator.Sub;
                                                 if (c == '/') CurrentOperator = AstOperator.Div;
                                                 if (c == '*') CurrentOperator = AstOperator.Mult;
+                                                if (c == 'x' || c == 'X') CurrentOperator = AstOperator.Mult;
                                                 if (c == '^') CurrentOperator = AstOperator.Pow;
                                                 SetTokenType(TokenType.None);
 
