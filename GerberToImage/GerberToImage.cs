@@ -1,13 +1,11 @@
 ﻿using GerberLibrary;
 using System;
 using System.Collections.Generic;
-using System.Drawing;
-using System.Drawing.Imaging;
 using System.IO;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Windows.Forms;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.PixelFormats;
+using SixLabors.ImageSharp.Processing;
 
 namespace GerberToImage
 {
@@ -88,7 +86,7 @@ namespace GerberToImage
                 Gerber.ExtremelyVerbose = false;
                 //Gerber.Verbose = true;
                 Gerber.ThrowExceptions = true;
-                Gerber.WaitForKey = true;
+                Gerber.WaitForKey = false;
                 Gerber.ShowProgress = true;
 
                CreateImageForSingleFile(new StandardConsoleLog(),RestList[0], Color.Black, Color.White,dpi);

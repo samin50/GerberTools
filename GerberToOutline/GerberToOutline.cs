@@ -6,7 +6,10 @@ using System.Threading.Tasks;
 using GerberLibrary;
 using GerberLibrary.Core;
 using System.IO;
-using System.Drawing;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.PixelFormats;
+using SixLabors.ImageSharp.Drawing.Processing;
+using SixLabors.ImageSharp.Processing;
 
 namespace GerberToOutline
 {
@@ -72,9 +75,11 @@ namespace GerberToOutline
             SG.TranslateTransform((float)-PLS.BoundingBox.TopLeft.X, (float)-PLS.BoundingBox.TopLeft.Y);
             DrawToInterface(PLS, SG);
             SG.Save(outfile);
-            System.Diagnostics.Process.Start(outfile);
-            Console.WriteLine("press any key to continue..");
-            Console.ReadKey();
+            if (System.Runtime.InteropServices.RuntimeInformation.IsOSPlatform(System.Runtime.InteropServices.OSPlatform.Windows))
+            { 
+               System.Diagnostics.Process.Start(outfile);
+            }
+            Console.WriteLine("Done.");
 
         }
 
@@ -86,7 +91,7 @@ namespace GerberToOutline
             foreach (var a in PLS.DisplayShapes)
             {
                 i2++;
-                Pen P = new Pen(Color.FromArgb((byte)R.Next(), (byte)R.Next(), (byte)R.Next()), 0.1f);
+                GerberLibrary.Core.Primitives.Pen P = new GerberLibrary.Core.Primitives.Pen(Color.FromRgba((byte)R.Next(), (byte)R.Next(), (byte)R.Next(), 255), 0.1f);
                 for (int i = 0; i < a.Vertices.Count; i++)
                 {
                     var v1 = a.Vertices[i];

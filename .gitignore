@@ -257,3 +257,5 @@ Build/
 /scripts
 nuget.exe
 /.gsd
+/TiNRS-Tiler.app
+/Tests/Ucamco_TestFiles

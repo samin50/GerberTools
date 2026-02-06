@@ -29,17 +29,18 @@ namespace GerberSplitter
         static void Slice(string slicefile, List<string> inputgerbers)
         { 
             List<PolyLine> SliceSet = new List<PolyLine>();
-            
-            var OutputFolder = Path.GetDirectoryName(slicefile) + @"\Output\" + Path.GetFileNameWithoutExtension(slicefile);
 
-            ParsedGerber P = PolyLineSet.LoadGerberFile(new StandardConsoleLog(), slicefile);
+            var OutputFolder = Path.Combine(Path.GetDirectoryName(slicefile), "Output", Path.GetFileNameWithoutExtension(slicefile));
+
+            var state = new GerberParserState() { PreCombinePolygons = true };
+             ParsedGerber P = PolyLineSet.LoadGerberFile(new StandardConsoleLog(), slicefile, false, false, state);
 
             foreach (var l in P.Shapes)
             {
-                /* Polygon Pp = new Polygon();
-                Pp.Closed = true;
-                var vertL = from i in l.Vertices select new vec2(i.X, i.Y);
-                Pp.Vertices.AddRange(vertL);*/
+                SliceSet.Add(l);
+            }
+            foreach (var l in P.OutlineShapes)
+            {
                 SliceSet.Add(l);
             }
 
@@ -48,7 +49,7 @@ namespace GerberSplitter
             foreach (var S in SliceSet)
             {
                 Console.WriteLine("Slicing {0}/{1}", slid, SliceSet.Count); 
-                var SliceOutputFolder = Path.GetDirectoryName(slicefile) + @"\Output\" + Path.GetFileNameWithoutExtension(slicefile) + "\\Slice" + slid.ToString();
+                var SliceOutputFolder = Path.Combine(OutputFolder, "Slice" + slid.ToString());
                 if (Directory.Exists(SliceOutputFolder) == false) Directory.CreateDirectory(SliceOutputFolder);
 
                 foreach (var a in inputgerbers)
@@ -63,7 +64,7 @@ namespace GerberSplitter
                             BoardLayer L;
                             GerberLibrary.Gerber.DetermineBoardSideAndLayer(a, out bs, out L);
 
-                            GerberMerger.WriteContainedOnly(a, S, Path.Combine(SliceOutputFolder + "\\", Path.GetFileName(a)), new StandardConsoleLog());
+                            GerberMerger.WriteContainedOnly(a, S, Path.Combine(SliceOutputFolder, Path.GetFileName(a)), new StandardConsoleLog());
                         }
                     }
                     catch (Exception) { };
