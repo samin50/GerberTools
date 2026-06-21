@@ -1,0 +1,33 @@
+name: Build FrameDrop (VScorePanel)
+
+on:
+  push:
+    branches: [master, autobuild]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup NuGet
+        uses: NuGet/setup-nuget@v2
+
+      - name: Restore NuGet packages
+        run: nuget restore GerberLibrary\GerberLibrary.csproj -SolutionDirectory GerberProjects
+
+      - name: Build FrameDrop
+        run: |
+          & "$(& "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe" -latest -requires Microsoft.Component.MSBuild -find MSBuild\**\Bin\MSBuild.exe)" `
+            VScorePanel\FrameDrop.csproj `
+            /p:Configuration=Release `
+            /p:Platform=AnyCPU
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: FrameDrop
+          path: Build/FrameDrop/
+          if-no-files-found: error
